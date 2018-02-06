@@ -704,6 +704,104 @@ namespace StackExchange.Redis.Extensions.Tests
             Assert.Equal(item, null);
         }
 
+        [Fact]
+        public void Get_Value_With_Expiry_Updates_ExpiryAt()
+        {
+            var key = "Test Key";
+            var value = "Test Value";
+            var originalTime = DateTime.UtcNow.AddSeconds(5);
+            var testTime = DateTime.UtcNow.AddSeconds(20);
+            var resultTimeSpan = originalTime.Subtract(DateTime.UtcNow);
+
+            Sut.Add(key, value, originalTime);
+            Sut.Get<string>(key, testTime);
+            var resultValue = Db.StringGetWithExpiry(key);
+
+            Assert.True(resultTimeSpan < resultValue.Expiry.Value);
+        }
+
+        [Fact]
+        public void Get_Value_With_Expiry_Updates_ExpiryIn()
+        {
+            var key = "Test Key";
+            var value = "Test Value";
+            var originalTime = new TimeSpan(0, 0, 5);
+            var testTime = new TimeSpan(0, 0, 20);
+            var resultTimeSpan = originalTime;
+
+            Sut.Add(key, value, originalTime);
+            Sut.Get<string>(key, testTime);
+            var resultValue = Db.StringGetWithExpiry(key);
+
+            Assert.True(resultTimeSpan < resultValue.Expiry.Value);
+        }
+
+        [Fact]
+        public void Get_Value_With_Expiry_Updates_ExpiryAt_Async()
+        {
+            var key = "Test Key";
+            var value = "Test Value";
+            var originalTime = DateTime.UtcNow.AddSeconds(5);
+            var testTime = DateTime.UtcNow.AddSeconds(20);
+
+            Sut.AddAsync(key, value, originalTime).Wait();
+            Sut.GetAsync<string>(key, testTime).Wait();
+            var resultValue = Db.StringGetWithExpiry(key);
+
+            Assert.True(originalTime.Subtract(DateTime.UtcNow) < resultValue.Expiry.Value);
+        }
+
+        [Fact]
+        public void Get_Value_With_Expiry_Updates_ExpiryIn_Async()
+        {
+            var key = "Test Key";
+            var value = "Test Value";
+            var originalTime = DateTime.UtcNow.AddSeconds(5).Subtract(DateTime.UtcNow);
+            var testTime = DateTime.UtcNow.AddSeconds(20).Subtract(DateTime.UtcNow);
+
+            Sut.AddAsync(key, value, originalTime).Wait();
+            Sut.GetAsync<string>(key, testTime).Wait();
+            var resultValue = Db.StringGetWithExpiry(key);
+
+            Assert.True(originalTime < resultValue.Expiry.Value);
+        }
+
+        [Fact]
+        public void Get_All_Value_With_Expiry_Updates_Expiry()
+        {
+            var key = "Test Key";
+            var value = new TestClass<string> { Key = key, Value = "Hello World!" };
+            var originalTime = DateTime.UtcNow.AddSeconds(5).Subtract(DateTime.UtcNow);
+            var testTime = DateTime.UtcNow.AddSeconds(20).Subtract(DateTime.UtcNow);
+
+            var values = new List<Tuple<string, TestClass<string>>>() { new Tuple<string, TestClass<string>>(key, value) };
+            var keys = new List<string> { key };
+
+            Sut.AddAll(values, originalTime);
+            Sut.GetAll<TestClass<string>>(keys, testTime);
+            var resultValue = Db.StringGetWithExpiry(key);
+
+            Assert.True(originalTime < resultValue.Expiry.Value);
+        }
+
+        [Fact]
+        public void Get_All_Value_With_Expiry_Updates_Expiry_Async()
+        {
+            var key = "Test Key";
+            var value = new TestClass<string> { Key = key, Value = "Hello World!" };
+            var originalTime = DateTime.UtcNow.AddSeconds(5).Subtract(DateTime.UtcNow);
+            var testTime = DateTime.UtcNow.AddSeconds(20).Subtract(DateTime.UtcNow);
+
+            var values = new List<Tuple<string, TestClass<string>>>() { new Tuple<string, TestClass<string>>(key, value) };
+            var keys = new List<string> { key };
+
+            Sut.AddAllAsync(values, originalTime).Wait();
+            Sut.GetAllAsync<TestClass<string>>(keys, testTime).Wait();
+            var resultValue = Db.StringGetWithExpiry(key);
+
+            Assert.True(originalTime < resultValue.Expiry.Value);
+        }
+
         #region Hash tests
 
         [Fact]
